@@ -42,7 +42,7 @@ export async function POST(req: Request) {
       { message: "User registered successfully", userId: user.id },
       { status: 201 }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error("REGISTRATION_ERROR", error);
     return NextResponse.json(
       { error: "Internal server error" },
