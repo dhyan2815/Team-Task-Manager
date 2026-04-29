@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Suspense } from "react";
 import styles from "./layout.module.css";
 
 export default function AuthLayout({
@@ -15,7 +15,9 @@ export default function AuthLayout({
             <span className={styles.logoText}>Ethara AI</span>
           </div>
         </div>
-        {children}
+        <Suspense fallback={<div>Loading...</div>}>
+          {children}
+        </Suspense>
       </div>
     </div>
   );

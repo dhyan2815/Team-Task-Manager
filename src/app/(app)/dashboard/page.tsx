@@ -8,20 +8,40 @@ import {
   Clock, 
   AlertCircle, 
   BarChart3,
-  Calendar
 } from "lucide-react";
 import styles from "./page.module.css";
 
+interface DashboardTask {
+  id: string;
+  title: string;
+  status: string;
+  dueDate: string | null;
+  project: {
+    name: string;
+    color: string;
+  };
+}
+
+interface DashboardStats {
+  taskCounts: Record<string, number>;
+  overdueTasks: DashboardTask[];
+  recentTasks: DashboardTask[];
+}
+
 export default function DashboardPage() {
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
     async function fetchDashboard() {
       try {
         const res = await fetch("/api/dashboard");
-        const data = await res.json();
-        setStats(data);
+        if (res.ok) {
+          const data = await res.json();
+          setStats(data);
+        }
       } catch (error) {
         console.error("Failed to fetch dashboard", error);
       } finally {
@@ -31,10 +51,36 @@ export default function DashboardPage() {
     fetchDashboard();
   }, []);
 
-  if (isLoading) return <div>Loading dashboard...</div>;
+  if (isLoading) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.header}>
+          <h1 className="section-heading">Dashboard</h1>
+          <p className="body-text" style={{ color: "var(--color-text-secondary)" }}>
+            Loading your dashboard...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const taskCounts = stats?.taskCounts || {};
-  const totalTasks = Object.values(taskCounts).reduce((a: any, b: any) => a + b, 0);
+  const totalTasks = Object.values(taskCounts).reduce((a: number, b: number) => a + b, 0);
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString || !isClient) return "";
+    return new Date(dateString).toLocaleDateString();
+  };
+
+  const formatStatus = (status: string) => {
+    return status.split('_').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+    ).join(' ');
+  };
+
+  const getStatusVariant = (status: string): any => {
+    return status.toLowerCase().replace(/_/g, "-");
+  };
 
   return (
     <div className={styles.container}>
@@ -61,7 +107,7 @@ export default function DashboardPage() {
           </div>
           <div className={styles.statInfo}>
             <p className="caption" style={{ color: "var(--color-text-muted)" }}>In Progress</p>
-            <p className="section-heading" style={{ fontSize: "24px" }}>{taskCounts.IN_PROGRESS || 0}</p>
+            <p className="section-heading" style={{ fontSize: "24px" }}>{taskCounts["IN_PROGRESS"] || 0}</p>
           </div>
         </Card>
         <Card className={styles.statCard}>
@@ -70,7 +116,7 @@ export default function DashboardPage() {
           </div>
           <div className={styles.statInfo}>
             <p className="caption" style={{ color: "var(--color-text-muted)" }}>Completed</p>
-            <p className="section-heading" style={{ fontSize: "24px" }}>{taskCounts.DONE || 0}</p>
+            <p className="section-heading" style={{ fontSize: "24px" }}>{taskCounts["DONE"] || 0}</p>
           </div>
         </Card>
         <Card className={styles.statCard}>
@@ -86,16 +132,16 @@ export default function DashboardPage() {
 
       <div className={styles.mainGrid}>
         <Card title="Overdue Tasks" className={styles.listCard}>
-          {stats?.overdueTasks?.length > 0 ? (
+          {stats && stats.overdueTasks.length > 0 ? (
             <div className={styles.taskList}>
-              {stats.overdueTasks.map((task: any) => (
+              {stats.overdueTasks.map((task: DashboardTask) => (
                 <div key={task.id} className={styles.taskItem}>
                   <div className={styles.taskTitle}>
                     <p className="body-text" style={{ fontWeight: 600 }}>{task.title}</p>
                     <p className="caption" style={{ color: "var(--color-text-muted)" }}>{task.project.name}</p>
                   </div>
                   <Badge variant="urgent">
-                    {new Date(task.dueDate).toLocaleDateString()}
+                    {formatDate(task.dueDate)}
                   </Badge>
                 </div>
               ))}
@@ -108,16 +154,16 @@ export default function DashboardPage() {
         </Card>
 
         <Card title="Recent Activity" className={styles.listCard}>
-          {stats?.recentTasks?.length > 0 ? (
+          {stats && stats.recentTasks.length > 0 ? (
             <div className={styles.taskList}>
-              {stats.recentTasks.map((task: any) => (
+              {stats.recentTasks.map((task: DashboardTask) => (
                 <div key={task.id} className={styles.taskItem}>
                   <div className={styles.taskTitle}>
                     <p className="body-text" style={{ fontWeight: 600 }}>{task.title}</p>
                     <p className="caption" style={{ color: "var(--color-text-muted)" }}>{task.project.name}</p>
                   </div>
-                  <Badge variant={task.status.toLowerCase().replace("_", "-") as any}>
-                    {task.status.replace("_", " ")}
+                  <Badge variant={getStatusVariant(task.status)}>
+                    {formatStatus(task.status)}
                   </Badge>
                 </div>
               ))}
