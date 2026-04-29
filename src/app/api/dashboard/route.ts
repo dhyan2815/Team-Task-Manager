@@ -49,7 +49,7 @@ export async function GET() {
     });
 
     return NextResponse.json({
-      taskCounts: taskCounts.reduce((acc, curr) => {
+      taskCounts: taskCounts.reduce((acc: Record<string, number>, curr: { status: string; _count: number }) => {
         acc[curr.status] = curr._count;
         return acc;
       }, {} as Record<string, number>),
