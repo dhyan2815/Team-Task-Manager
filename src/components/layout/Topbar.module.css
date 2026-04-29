@@ -1,0 +1,104 @@
+.topbar {
+  height: 64px;
+  background-color: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.5rem;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.searchContainer {
+  display: flex;
+  align-items: center;
+  background-color: var(--color-bg-alt);
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-xs);
+  width: 100%;
+  max-width: 400px;
+  border: 1px solid var(--color-border);
+}
+
+.searchIcon {
+  color: var(--color-text-muted);
+}
+
+.searchInput {
+  border: none;
+  background: none;
+  padding: 0 0.5rem;
+  width: 100%;
+  font-size: 14px;
+  color: var(--color-text);
+}
+
+.searchInput:focus {
+  outline: none;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.iconBtn {
+  color: var(--color-text-secondary);
+  transition: color 0.2s;
+}
+
+.iconBtn:hover {
+  color: var(--color-text);
+}
+
+.profile {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding-left: 1rem;
+  border-left: 1px solid var(--color-border);
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  background-color: var(--color-primary);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.profileInfo {
+  display: flex;
+  flex-direction: column;
+}
+
+.userName {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.userEmail {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.logoutBtn {
+  color: var(--color-text-muted);
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.logoutBtn:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  color: var(--color-danger);
+}

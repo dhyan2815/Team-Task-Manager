@@ -5,7 +5,7 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "Ethara AI | Team Task Manager",
+  title: "Ethara AI - Team Task Manager",
   description: "A premium team task management application inspired by Notion.",
 };
 
