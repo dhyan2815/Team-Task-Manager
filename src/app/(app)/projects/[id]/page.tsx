@@ -12,9 +12,11 @@ import {
   MoreHorizontal, 
   Calendar,
   User as UserIcon,
+  Users,
   Search,
   Loader2
 } from "lucide-react";
+import { AccessDenied } from "@/components/ui/AccessDenied";
 import styles from "./page.module.css";
 
 type TaskStatus = "TODO" | "IN_PROGRESS" | "IN_REVIEW" | "DONE";
@@ -37,6 +39,7 @@ interface Project {
   name: string;
   description: string | null;
   color: string;
+  members: { role: string }[];
 }
 
 const COLUMNS: { id: TaskStatus; label: string }[] = [
@@ -53,6 +56,7 @@ export default function ProjectBoardPage() {
   const [project, setProject] = useState<Project | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<{ status: number; message: string } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -76,29 +80,30 @@ export default function ProjectBoardPage() {
         fetch(`/api/projects/${projectId}/tasks`)
       ]);
       
-      if (projRes.ok) setProject(await projRes.json());
+      if (!projRes.ok) {
+        const err = await projRes.json();
+        setError({ status: projRes.status, message: err.error });
+        return;
+      }
+      
+      setProject(await projRes.json());
       if (tasksRes.ok) setTasks(await tasksRes.json());
     } catch (error) {
       console.error("Failed to fetch project data", error);
+      setError({ status: 500, message: "Something went wrong while loading the project." });
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Fetch initial data
   useEffect(() => {
     fetchData();
-
-    // 30s Polling
     const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
   }, [projectId]);
 
-  // Optimistic Update
   const updateTaskStatus = async (taskId: string, newStatus: TaskStatus) => {
     const originalTasks = [...tasks];
-    
-    // 1. Update UI Optimistically
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
 
     try {
@@ -107,11 +112,9 @@ export default function ProjectBoardPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
       });
-
       if (!res.ok) throw new Error("Failed to update status");
     } catch (error) {
       console.error("Failed to update task status", error);
-      // 2. Rollback on error
       setTasks(originalTasks);
     }
   };
@@ -119,7 +122,6 @@ export default function ProjectBoardPage() {
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsCreating(true);
-
     try {
       const res = await fetch(`/api/projects/${projectId}/tasks`, {
         method: "POST",
@@ -132,7 +134,7 @@ export default function ProjectBoardPage() {
         setTasks((prev) => [newTask, ...prev]);
         setIsModalOpen(false);
         setFormData({ title: "", description: "", priority: "MEDIUM", status: "TODO" });
-        fetchData(); // Refresh to get full data
+        fetchData();
       } else {
         const error = await res.json();
         alert(error.error || "Failed to create task");
@@ -166,14 +168,12 @@ export default function ProjectBoardPage() {
   const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsAddingMember(true);
-
     try {
       const res = await fetch(`/api/projects/${projectId}/members`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: newMemberEmail, role: "MEMBER" }),
       });
-
       if (res.ok) {
         setNewMemberEmail("");
         fetchMembers();
@@ -185,7 +185,7 @@ export default function ProjectBoardPage() {
       console.error("Failed to add member", error);
       alert("Something went wrong");
     } finally {
-      setIsAddingMember(true);
+      setIsAddingMember(false);
     }
   };
 
@@ -196,7 +196,19 @@ export default function ProjectBoardPage() {
     );
   }, [tasks, searchQuery]);
 
+  const userRole = project?.members?.[0]?.role;
+  const isAdmin = userRole === "ADMIN";
+
   if (isLoading) return <div className={styles.loading}>Loading project board...</div>;
+
+  if (error) {
+    return (
+      <AccessDenied 
+        title={error.status === 403 ? "Forbidden Access" : "Not Found"} 
+        message={error.message} 
+      />
+    );
+  }
 
   return (
     <div className={styles.container}>
@@ -224,10 +236,12 @@ export default function ProjectBoardPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <Button variant="secondary" onClick={() => setIsMembersModalOpen(true)}>
-            <Users size={18} />
-            Members
-          </Button>
+          {isAdmin && (
+            <Button variant="secondary" onClick={() => setIsMembersModalOpen(true)}>
+              <Users size={18} />
+              Members
+            </Button>
+          )}
           <Button onClick={() => setIsModalOpen(true)}>
             <Plus size={18} />
             Add Task

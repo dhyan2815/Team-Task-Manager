@@ -19,11 +19,20 @@ export async function GET(
         _count: {
           select: { tasks: true, members: true },
         },
+        members: {
+          where: { userId: session.user.id },
+          select: { role: true },
+        },
       },
     });
 
     if (!project) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+
+    // Check if current user is actually a member
+    if (project.members.length === 0) {
+      return NextResponse.json({ error: "Access denied. You are not a member of this project." }, { status: 403 });
     }
 
     return NextResponse.json(project);
@@ -68,6 +77,19 @@ export async function DELETE(
   }
 
   try {
+    const requester = await prisma.projectMember.findUnique({
+      where: {
+        userId_projectId: {
+          userId: session.user.id,
+          projectId: params.id,
+        },
+      },
+    });
+
+    if (!requester || requester.role !== "ADMIN") {
+      return NextResponse.json({ error: "Only admins can delete projects" }, { status: 403 });
+    }
+
     await prisma.project.delete({
       where: { id: params.id },
     });

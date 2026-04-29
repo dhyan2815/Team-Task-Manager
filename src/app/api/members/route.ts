@@ -18,7 +18,7 @@ export async function GET() {
       select: { projectId: true },
     });
 
-    const projectIds = myProjects.map((p) => p.projectId);
+    const projectIds = myProjects.map((p: any) => p.projectId);
 
     // Find all unique users in those projects
     const members = await prisma.projectMember.findMany({
@@ -33,7 +33,7 @@ export async function GET() {
     });
 
     // Map to a cleaner format (one entry per user-project combo)
-    const formattedMembers = members.map((m) => ({
+    const formattedMembers = members.map((m: any) => ({
       id: `${m.userId}-${m.projectId}`,
       name: m.user.name,
       email: m.user.email,

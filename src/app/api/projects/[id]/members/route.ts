@@ -55,6 +55,20 @@ export async function POST(
       );
     }
 
+    // 1. Check if the requester is an ADMIN of this project
+    const requester = await prisma.projectMember.findUnique({
+      where: {
+        userId_projectId: {
+          userId: session.user.id,
+          projectId: params.id,
+        },
+      },
+    });
+
+    if (!requester || requester.role !== "ADMIN") {
+      return NextResponse.json({ error: "Only admins can add members" }, { status: 403 });
+    }
+
     const { email, role } = validatedData.data;
 
     // Check if user exists

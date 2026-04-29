@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Plus, Users, Calendar, Loader2 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
+import { AccessDenied } from "@/components/ui/AccessDenied";
 import styles from "./page.module.css";
 import { useRouter } from "next/navigation";
 
@@ -13,6 +14,7 @@ export default function ProjectsPage() {
   const router = useRouter();
   const [projects, setProjects] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<{ status: number; message: string } | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [formData, setFormData] = useState({
@@ -24,10 +26,16 @@ export default function ProjectsPage() {
   const fetchProjects = async () => {
     try {
       const res = await fetch("/api/projects");
+      if (!res.ok) {
+        const err = await res.json();
+        setError({ status: res.status, message: err.error || "Failed to load projects" });
+        return;
+      }
       const data = await res.json();
       setProjects(data);
     } catch (error) {
       console.error("Failed to fetch projects", error);
+      setError({ status: 500, message: "Something went wrong while loading projects." });
     } finally {
       setIsLoading(false);
     }
@@ -66,6 +74,15 @@ export default function ProjectsPage() {
       setIsCreating(false);
     }
   };
+
+  if (error) {
+    return (
+      <AccessDenied 
+        title={error.status === 403 ? "Forbidden Access" : "Error Loading Projects"} 
+        message={error.message} 
+      />
+    );
+  }
 
   return (
     <div className={styles.container}>

@@ -9,6 +9,7 @@ import {
   AlertCircle, 
   BarChart3,
 } from "lucide-react";
+import { AccessDenied } from "@/components/ui/AccessDenied";
 import styles from "./page.module.css";
 
 interface DashboardTask {
@@ -31,6 +32,7 @@ interface DashboardStats {
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<{ status: number; message: string } | null>(null);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
@@ -38,18 +40,31 @@ export default function DashboardPage() {
     async function fetchDashboard() {
       try {
         const res = await fetch("/api/dashboard");
-        if (res.ok) {
-          const data = await res.json();
-          setStats(data);
+        if (!res.ok) {
+          const err = await res.json();
+          setError({ status: res.status, message: err.error || "Failed to load dashboard" });
+          return;
         }
+        const data = await res.json();
+        setStats(data);
       } catch (error) {
         console.error("Failed to fetch dashboard", error);
+        setError({ status: 500, message: "Something went wrong while loading the dashboard." });
       } finally {
         setIsLoading(false);
       }
     }
     fetchDashboard();
   }, []);
+
+  if (error) {
+    return (
+      <AccessDenied 
+        title={error.status === 403 ? "Forbidden Access" : "Error Loading Dashboard"} 
+        message={error.message} 
+      />
+    );
+  }
 
   if (isLoading) {
     return (
