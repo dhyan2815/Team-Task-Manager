@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { 
@@ -21,6 +22,22 @@ const navItems = [
 
 export const Sidebar = () => {
   const pathname = usePathname();
+  const [projects, setProjects] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function fetchProjects() {
+      try {
+        const res = await fetch("/api/projects");
+        if (res.ok) {
+          const data = await res.json();
+          setProjects(data.slice(0, 5)); // Only show top 5
+        }
+      } catch (error) {
+        console.error("Failed to fetch projects for sidebar", error);
+      }
+    }
+    fetchProjects();
+  }, [pathname]); // Refresh when navigating
 
   return (
     <aside className={styles.sidebar}>
@@ -36,7 +53,7 @@ export const Sidebar = () => {
           <p className={styles.sectionLabel}>Overview</p>
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname.startsWith(item.href);
+            const isActive = pathname === item.href;
             return (
               <Link
                 key={item.href}
@@ -53,12 +70,26 @@ export const Sidebar = () => {
         <div className={styles.section}>
           <div className={styles.sectionHeader}>
             <p className={styles.sectionLabel}>Projects</p>
-            <button className={styles.addBtn} title="New Project">
+            <Link href="/projects" className={styles.addBtn} title="All Projects">
               <Plus size={14} />
-            </button>
+            </Link>
           </div>
-          {/* Recent projects could be fetched here */}
-          <div className={styles.emptyState}>No recent projects</div>
+          <div className={styles.projectList}>
+            {projects.length > 0 ? (
+              projects.map((p) => (
+                <Link
+                  key={p.id}
+                  href={`/projects/${p.id}`}
+                  className={`${styles.projectLink} ${pathname.includes(p.id) ? styles.active : ""}`}
+                >
+                  <div className={styles.dot} style={{ backgroundColor: p.color }} />
+                  <span>{p.name}</span>
+                </Link>
+              ))
+            ) : (
+              <div className={styles.emptyState}>No projects</div>
+            )}
+          </div>
         </div>
       </nav>
 

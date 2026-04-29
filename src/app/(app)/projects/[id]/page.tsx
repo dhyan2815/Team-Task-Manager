@@ -6,12 +6,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { Modal } from "@/components/ui/Modal";
 import { 
   Plus, 
   MoreHorizontal, 
   Calendar,
   User as UserIcon,
-  Search
+  Search,
+  Loader2
 } from "lucide-react";
 import styles from "./page.module.css";
 
@@ -52,24 +54,39 @@ export default function ProjectBoardPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [isAddingMember, setIsAddingMember] = useState(false);
+  const [projectMembers, setProjectMembers] = useState<any[]>([]);
+  const [newMemberEmail, setNewMemberEmail] = useState("");
+  
+  const [formData, setFormData] = useState({
+    title: "",
+    description: "",
+    priority: "MEDIUM" as const,
+    status: "TODO" as TaskStatus,
+  });
+
+  const fetchData = async () => {
+    try {
+      const [projRes, tasksRes] = await Promise.all([
+        fetch(`/api/projects/${projectId}`),
+        fetch(`/api/projects/${projectId}/tasks`)
+      ]);
+      
+      if (projRes.ok) setProject(await projRes.json());
+      if (tasksRes.ok) setTasks(await tasksRes.json());
+    } catch (error) {
+      console.error("Failed to fetch project data", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Fetch initial data
   useEffect(() => {
-    async function fetchData() {
-      try {
-        const [projRes, tasksRes] = await Promise.all([
-          fetch(`/api/projects/${projectId}`),
-          fetch(`/api/projects/${projectId}/tasks`)
-        ]);
-        
-        if (projRes.ok) setProject(await projRes.json());
-        if (tasksRes.ok) setTasks(await tasksRes.json());
-      } catch (error) {
-        console.error("Failed to fetch project data", error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
     fetchData();
 
     // 30s Polling
@@ -96,6 +113,79 @@ export default function ProjectBoardPage() {
       console.error("Failed to update task status", error);
       // 2. Rollback on error
       setTasks(originalTasks);
+    }
+  };
+
+  const handleCreateTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsCreating(true);
+
+    try {
+      const res = await fetch(`/api/projects/${projectId}/tasks`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      if (res.ok) {
+        const newTask = await res.json();
+        setTasks((prev) => [newTask, ...prev]);
+        setIsModalOpen(false);
+        setFormData({ title: "", description: "", priority: "MEDIUM", status: "TODO" });
+        fetchData(); // Refresh to get full data
+      } else {
+        const error = await res.json();
+        alert(error.error || "Failed to create task");
+      }
+    } catch (error) {
+      console.error("Task creation failed", error);
+      alert("Something went wrong");
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const fetchMembers = async () => {
+    try {
+      const res = await fetch(`/api/projects/${projectId}/members`);
+      if (res.ok) {
+        const data = await res.json();
+        setProjectMembers(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch project members", error);
+    }
+  };
+
+  useEffect(() => {
+    if (isMembersModalOpen) {
+      fetchMembers();
+    }
+  }, [isMembersModalOpen]);
+
+  const handleAddMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsAddingMember(true);
+
+    try {
+      const res = await fetch(`/api/projects/${projectId}/members`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: newMemberEmail, role: "MEMBER" }),
+      });
+
+      if (res.ok) {
+        setNewMemberEmail("");
+        fetchMembers();
+      } else {
+        const error = await res.json();
+        alert(error.error || "Failed to add member");
+      }
+    } catch (error) {
+      console.error("Failed to add member", error);
+      alert("Something went wrong");
+    } finally {
+      setIsAddingMember(true);
     }
   };
 
@@ -134,7 +224,11 @@ export default function ProjectBoardPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <Button>
+          <Button variant="secondary" onClick={() => setIsMembersModalOpen(true)}>
+            <Users size={18} />
+            Members
+          </Button>
+          <Button onClick={() => setIsModalOpen(true)}>
             <Plus size={18} />
             Add Task
           </Button>
@@ -214,6 +308,116 @@ export default function ProjectBoardPage() {
           </div>
         ))}
       </div>
+
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title="Add New Task"
+      >
+        <form onSubmit={handleCreateTask} className={styles.form}>
+          <div className={styles.formGroup}>
+            <label htmlFor="task-title">Task Title</label>
+            <input
+              id="task-title"
+              type="text"
+              required
+              placeholder="e.g. Design landing page"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+            />
+          </div>
+          <div className={styles.formGroup}>
+            <label htmlFor="task-desc">Description</label>
+            <textarea
+              id="task-desc"
+              placeholder="Describe the task..."
+              rows={3}
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            />
+          </div>
+          <div className={styles.row}>
+            <div className={styles.formGroup} style={{ flex: 1 }}>
+              <label htmlFor="task-priority">Priority</label>
+              <select
+                id="task-priority"
+                value={formData.priority}
+                onChange={(e) => setFormData({ ...formData, priority: e.target.value as any })}
+              >
+                <option value="LOW">Low</option>
+                <option value="MEDIUM">Medium</option>
+                <option value="HIGH">High</option>
+                <option value="URGENT">Urgent</option>
+              </select>
+            </div>
+            <div className={styles.formGroup} style={{ flex: 1 }}>
+              <label htmlFor="task-status">Status</label>
+              <select
+                id="task-status"
+                value={formData.status}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+              >
+                <option value="TODO">To Do</option>
+                <option value="IN_PROGRESS">In Progress</option>
+                <option value="IN_REVIEW">In Review</option>
+                <option value="DONE">Done</option>
+              </select>
+            </div>
+          </div>
+          <div className={styles.formActions}>
+            <Button 
+              type="button" 
+              variant="secondary" 
+              onClick={() => setIsModalOpen(false)}
+              disabled={isCreating}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isCreating}>
+              {isCreating ? <Loader2 className="animate-spin" size={18} /> : "Add Task"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+      
+      <Modal
+        isOpen={isMembersModalOpen}
+        onClose={() => setIsMembersModalOpen(false)}
+        title="Project Members"
+      >
+        <div className={styles.membersContent}>
+          <form onSubmit={handleAddMember} className={styles.addMemberForm}>
+            <input
+              type="email"
+              placeholder="Invite by email..."
+              required
+              value={newMemberEmail}
+              onChange={(e) => setNewMemberEmail(e.target.value)}
+              className={styles.memberInput}
+            />
+            <Button type="submit" disabled={isAddingMember}>
+              Add
+            </Button>
+          </form>
+
+          <div className={styles.membersList}>
+            {projectMembers.map((m) => (
+              <div key={m.id} className={styles.memberItem}>
+                <div className={styles.memberAvatar}>
+                  {m.user.name[0].toUpperCase()}
+                </div>
+                <div className={styles.memberInfo}>
+                  <p className="body-text" style={{ fontSize: "14px", fontWeight: 600 }}>{m.user.name}</p>
+                  <p className="caption" style={{ color: "var(--color-text-muted)" }}>{m.user.email}</p>
+                </div>
+                <Badge variant={m.role === "ADMIN" ? "high" : "low"}>
+                  {m.role}
+                </Badge>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

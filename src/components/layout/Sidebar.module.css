@@ -98,6 +98,42 @@
   color: var(--color-text);
 }
 
+.projectList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.projectLink {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-xs);
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.projectLink:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  color: var(--color-text);
+}
+
+.projectLink.active {
+  background-color: rgba(0, 0, 0, 0.05);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
 .emptyState {
   font-size: 12px;
   color: var(--color-text-muted);
