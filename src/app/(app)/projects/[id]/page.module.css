@@ -209,7 +209,7 @@
   background: var(--color-bg-primary);
   font-family: inherit;
   font-size: 0.875rem;
-  transition: all 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .formGroup input:focus, .formGroup textarea:focus, .formGroup select:focus {
@@ -287,4 +287,49 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+}
+
+.dropdownMenu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.25rem;
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-card);
+  min-width: 150px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  padding: 0.25rem;
+  overflow: hidden;
+}
+
+.dropdownItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text);
+  background: none;
+  border: none;
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  text-align: left;
+}
+
+.dropdownItem:hover {
+  background-color: var(--color-bg-alt);
+}
+
+.dropdownItemDanger {
+  color: var(--color-danger);
+}
+
+.dropdownItemDanger:hover {
+  background-color: rgba(229, 62, 62, 0.05);
 }

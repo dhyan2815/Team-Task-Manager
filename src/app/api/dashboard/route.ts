@@ -38,14 +38,20 @@ export async function GET() {
       take: 5
     });
 
-    // 3. Recent Tasks (Assigned to me)
-    const recentTasks = await prisma.task.findMany({
-      where: { assigneeId: userId },
-      orderBy: { updatedAt: "desc" },
-      include: {
-        project: { select: { name: true, color: true } }
+    // 3. Recent Activity logs
+    const activities = await prisma.activity.findMany({
+      where: {
+        OR: [
+          { userId },
+          { project: { members: { some: { userId } } } }
+        ]
       },
-      take: 5
+      orderBy: { createdAt: "desc" },
+      take: 10,
+      include: {
+        user: { select: { name: true, email: true } },
+        project: { select: { name: true, color: true } }
+      }
     });
 
     return NextResponse.json({
@@ -54,7 +60,7 @@ export async function GET() {
         return acc;
       }, {} as Record<string, number>),
       overdueTasks,
-      recentTasks,
+      activities,
     });
   } catch (error) {
     console.error("GET_DASHBOARD_ERROR", error);

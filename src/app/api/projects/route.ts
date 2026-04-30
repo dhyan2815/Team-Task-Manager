@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/db";
+import { logActivity } from "@/lib/activity";
 import { z } from "zod";
 
 const CreateProjectSchema = z.object({
@@ -75,6 +76,8 @@ export async function POST(req: Request) {
         },
       },
     });
+
+    await logActivity(session.user.id, "created project", "Project", project.name, project.id);
 
     return NextResponse.json(project, { status: 201 });
   } catch (error) {

@@ -9,7 +9,8 @@ import {
   CheckSquare, 
   Users, 
   Settings,
-  Plus
+  Plus,
+  Sparkles
 } from "lucide-react";
 import styles from "./Sidebar.module.css";
 
@@ -43,7 +44,7 @@ export const Sidebar = () => {
     <aside className={styles.sidebar}>
       <div className={styles.header}>
         <div className={styles.logo}>
-          <div className={styles.logoIcon}></div>
+          <Sparkles className={styles.logoIcon} size={20} fill="currentColor" />
           <span className={styles.logoText}>Ethara AI</span>
         </div>
       </div>

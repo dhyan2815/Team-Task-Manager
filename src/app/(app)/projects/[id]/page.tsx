@@ -14,7 +14,9 @@ import {
   User as UserIcon,
   Users,
   Search,
-  Loader2
+  Loader2,
+  Edit2,
+  Trash2
 } from "lucide-react";
 import { AccessDenied } from "@/components/ui/AccessDenied";
 import styles from "./page.module.css";
@@ -60,11 +62,24 @@ export default function ProjectBoardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isAddingMember, setIsAddingMember] = useState(false);
   const [projectMembers, setProjectMembers] = useState<any[]>([]);
   const [newMemberEmail, setNewMemberEmail] = useState("");
+  const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest(`.${styles.moreBtn}`) && !target.closest(`.${styles.dropdownMenu}`)) {
+        setActiveMenu(null);
+      }
+    };
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, []);
   
   const [formData, setFormData] = useState({
     title: "",
@@ -119,28 +134,46 @@ export default function ProjectBoardPage() {
     }
   };
 
-  const handleCreateTask = async (e: React.FormEvent) => {
+  const handleSaveTask = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsCreating(true);
     try {
-      const res = await fetch(`/api/projects/${projectId}/tasks`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
+      if (editingTaskId) {
+        const res = await fetch(`/api/tasks/${editingTaskId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(formData),
+        });
 
-      if (res.ok) {
-        const newTask = await res.json();
-        setTasks((prev) => [newTask, ...prev]);
-        setIsModalOpen(false);
-        setFormData({ title: "", description: "", priority: "MEDIUM", status: "TODO" });
-        fetchData();
+        if (res.ok) {
+          const updatedTask = await res.json();
+          setTasks((prev) => prev.map(t => t.id === editingTaskId ? { ...t, ...updatedTask } : t));
+          setIsModalOpen(false);
+          setEditingTaskId(null);
+          setFormData({ title: "", description: "", priority: "MEDIUM", status: "TODO" });
+        } else {
+          const error = await res.json();
+          alert(error.error || "Failed to update task");
+        }
       } else {
-        const error = await res.json();
-        alert(error.error || "Failed to create task");
+        const res = await fetch(`/api/projects/${projectId}/tasks`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(formData),
+        });
+
+        if (res.ok) {
+          const newTask = await res.json();
+          setTasks((prev) => [newTask, ...prev]);
+          setIsModalOpen(false);
+          setFormData({ title: "", description: "", priority: "MEDIUM", status: "TODO" });
+        } else {
+          const error = await res.json();
+          alert(error.error || "Failed to create task");
+        }
       }
     } catch (error) {
-      console.error("Task creation failed", error);
+      console.error("Task save failed", error);
       alert("Something went wrong");
     } finally {
       setIsCreating(false);
@@ -242,7 +275,11 @@ export default function ProjectBoardPage() {
               Members
             </Button>
           )}
-          <Button onClick={() => setIsModalOpen(true)}>
+          <Button onClick={() => {
+            setEditingTaskId(null);
+            setFormData({ title: "", description: "", priority: "MEDIUM", status: "TODO" });
+            setIsModalOpen(true);
+          }}>
             <Plus size={18} />
             Add Task
           </Button>
@@ -288,13 +325,70 @@ export default function ProjectBoardPage() {
                     >
                       <Card className={styles.taskCard}>
                         <div className={styles.taskContent}>
-                          <div className={styles.taskHeader}>
+                          <div className={styles.taskHeader} style={{ position: "relative" }}>
                             <Badge variant={task.priority.toLowerCase() as any}>
                               {task.priority}
                             </Badge>
-                            <button className={styles.moreBtn}>
+                            <button 
+                              className={styles.moreBtn}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveMenu(activeMenu === task.id ? null : task.id);
+                              }}
+                            >
                               <MoreHorizontal size={14} />
                             </button>
+                            <AnimatePresence>
+                              {activeMenu === task.id && (
+                                <motion.div 
+                                  initial={{ opacity: 0, scale: 0.95, y: -5 }}
+                                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                                  exit={{ opacity: 0, scale: 0.95, y: -5 }}
+                                  transition={{ duration: 0.15 }}
+                                  className={styles.dropdownMenu}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <button 
+                                    className={styles.dropdownItem}
+                                    onClick={() => {
+                                      setActiveMenu(null);
+                                      setEditingTaskId(task.id);
+                                      setFormData({
+                                        title: task.title,
+                                        description: task.description || "",
+                                        priority: task.priority as any,
+                                        status: task.status,
+                                      });
+                                      setIsModalOpen(true);
+                                    }}
+                                  >
+                                    <Edit2 size={14} />
+                                    Edit Task
+                                  </button>
+                                  <button 
+                                    className={`${styles.dropdownItem} ${styles.dropdownItemDanger}`}
+                                    onClick={async () => {
+                                      setActiveMenu(null);
+                                      if (confirm("Are you sure you want to delete this task?")) {
+                                        try {
+                                          const res = await fetch(`/api/tasks/${task.id}`, { method: "DELETE" });
+                                          if (res.ok) {
+                                            setTasks(prev => prev.filter(t => t.id !== task.id));
+                                          } else {
+                                            alert("Failed to delete task.");
+                                          }
+                                        } catch (error) {
+                                          console.error("Delete task failed", error);
+                                        }
+                                      }
+                                    }}
+                                  >
+                                    <Trash2 size={14} />
+                                    Delete Task
+                                  </button>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
                           </div>
                           <h4 className={styles.taskTitle}>{task.title}</h4>
                           {task.description && (
@@ -325,10 +419,14 @@ export default function ProjectBoardPage() {
 
       <Modal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title="Add New Task"
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingTaskId(null);
+          setFormData({ title: "", description: "", priority: "MEDIUM", status: "TODO" });
+        }}
+        title={editingTaskId ? "Edit Task" : "Add New Task"}
       >
-        <form onSubmit={handleCreateTask} className={styles.form}>
+        <form onSubmit={handleSaveTask} className={styles.form}>
           <div className={styles.formGroup}>
             <label htmlFor="task-title">Task Title</label>
             <input
@@ -382,13 +480,17 @@ export default function ProjectBoardPage() {
             <Button 
               type="button" 
               variant="secondary" 
-              onClick={() => setIsModalOpen(false)}
+              onClick={() => {
+                setIsModalOpen(false);
+                setEditingTaskId(null);
+                setFormData({ title: "", description: "", priority: "MEDIUM", status: "TODO" });
+              }}
               disabled={isCreating}
             >
               Cancel
             </Button>
             <Button type="submit" disabled={isCreating}>
-              {isCreating ? <Loader2 className="animate-spin" size={18} /> : "Add Task"}
+              {isCreating ? <Loader2 className="animate-spin" size={18} /> : (editingTaskId ? "Save Changes" : "Add Task")}
             </Button>
           </div>
         </form>

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import styles from "./page.module.css";
 
 export default function Home() {
@@ -9,8 +10,12 @@ export default function Home() {
           The premium task manager for modern teams.
         </p>
         <div className={styles.actions}>
-          <button className={styles.primaryBtn}>Get Started</button>
-          <button className={styles.secondaryBtn}>Learn More</button>
+          <Link href="/register" className={styles.primaryBtn}>
+            Get Started
+          </Link>
+          <Link href="/features" className={styles.secondaryBtn}>
+            Learn More
+          </Link>
         </div>
       </div>
     </main>

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/db";
+import { logActivity } from "@/lib/activity";
 
 export async function GET(
   req: Request,
@@ -59,6 +60,8 @@ export async function PATCH(
       data: body,
     });
 
+    await logActivity(session.user.id, "updated project", "Project", project.name, project.id);
+
     return NextResponse.json(project);
   } catch (error) {
     console.error("PATCH_PROJECT_ERROR", error);
@@ -90,9 +93,19 @@ export async function DELETE(
       return NextResponse.json({ error: "Only admins can delete projects" }, { status: 403 });
     }
 
+    const project = await prisma.project.findUnique({
+      where: { id: params.id },
+    });
+
+    if (!project) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+
     await prisma.project.delete({
       where: { id: params.id },
     });
+
+    await logActivity(session.user.id, "deleted project", "Project", project.name);
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {

@@ -95,7 +95,7 @@
   color: var(--color-text-muted);
   padding: 4px;
   border-radius: 4px;
-  transition: all 0.2s;
+  transition: background-color 0.2s, color 0.2s;
 }
 
 .logoutBtn:hover {

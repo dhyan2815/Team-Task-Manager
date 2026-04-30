@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/db";
+import { logActivity } from "@/lib/activity";
 import { z } from "zod";
 
 const UpdateTaskSchema = z.object({
@@ -43,6 +44,8 @@ export async function PATCH(
       },
     });
 
+    await logActivity(session.user.id, "updated task", "Task", task.title, task.projectId);
+
     return NextResponse.json(task);
   } catch (error) {
     console.error("PATCH_TASK_ERROR", error);
@@ -61,9 +64,19 @@ export async function DELETE(
   }
 
   try {
+    const task = await prisma.task.findUnique({
+      where: { id: params.id },
+    });
+
+    if (!task) {
+      return NextResponse.json({ error: "Task not found" }, { status: 404 });
+    }
+
     await prisma.task.delete({
       where: { id: params.id },
     });
+
+    await logActivity(session.user.id, "deleted task", "Task", task.title, task.projectId);
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {

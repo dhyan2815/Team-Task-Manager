@@ -1,7 +1,7 @@
 import React from "react";
 import styles from "./Badge.module.css";
 
-type BadgeVariant = "todo" | "in-progress" | "in-review" | "done" | "low" | "medium" | "high" | "urgent";
+type BadgeVariant = "todo" | "in-progress" | "in-review" | "done" | "low" | "medium" | "high" | "urgent" | "outline" | "default";
 
 interface BadgeProps {
   children: React.ReactNode;

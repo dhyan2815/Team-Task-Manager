@@ -8,6 +8,7 @@ import {
   Clock, 
   AlertCircle, 
   BarChart3,
+  Activity as ActivityIcon,
 } from "lucide-react";
 import { AccessDenied } from "@/components/ui/AccessDenied";
 import styles from "./page.module.css";
@@ -23,10 +24,26 @@ interface DashboardTask {
   };
 }
 
+interface DashboardActivity {
+  id: string;
+  action: string;
+  entityType: string;
+  entityTitle: string;
+  createdAt: string;
+  user: {
+    name: string;
+    email: string;
+  };
+  project?: {
+    name: string;
+    color: string;
+  };
+}
+
 interface DashboardStats {
   taskCounts: Record<string, number>;
   overdueTasks: DashboardTask[];
-  recentTasks: DashboardTask[];
+  activities: DashboardActivity[];
 }
 
 export default function DashboardPage() {
@@ -169,24 +186,33 @@ export default function DashboardPage() {
         </Card>
 
         <Card title="Recent Activity" className={styles.listCard}>
-          {stats && stats.recentTasks.length > 0 ? (
+          {stats && stats.activities && stats.activities.length > 0 ? (
             <div className={styles.taskList}>
-              {stats.recentTasks.map((task: DashboardTask) => (
-                <div key={task.id} className={styles.taskItem}>
+              {stats.activities.map((activity: DashboardActivity) => (
+                <div key={activity.id} className={styles.taskItem}>
                   <div className={styles.taskTitle}>
-                    <p className="body-text" style={{ fontWeight: 600 }}>{task.title}</p>
-                    <p className="caption" style={{ color: "var(--color-text-muted)" }}>{task.project.name}</p>
+                    <p className="body-text" style={{ fontWeight: 600 }}>
+                      <span style={{ color: "var(--color-primary)" }}>{activity.user.name}</span> {activity.action} {activity.entityType.toLowerCase()}: {activity.entityTitle}
+                    </p>
+                    {activity.project && (
+                      <p className="caption" style={{ color: "var(--color-text-muted)" }}>
+                        in {activity.project.name}
+                      </p>
+                    )}
                   </div>
-                  <Badge variant={getStatusVariant(task.status)}>
-                    {formatStatus(task.status)}
+                  <Badge variant="outline">
+                    {new Date(activity.createdAt).toLocaleDateString()}
                   </Badge>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="caption" style={{ color: "var(--color-text-muted)", textAlign: "center", padding: "2rem" }}>
-              No recent activity.
-            </p>
+            <div style={{ textAlign: "center", padding: "2rem", color: "var(--color-text-muted)" }}>
+              <ActivityIcon size={32} style={{ opacity: 0.5, margin: "0 auto 1rem auto" }} />
+              <p className="caption">
+                No recent activity. Actions you and your team make will appear here.
+              </p>
+            </div>
           )}
         </Card>
       </div>

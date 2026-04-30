@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/db";
+import { logActivity } from "@/lib/activity";
 import { z } from "zod";
 
 const CreateTaskSchema = z.object({
@@ -75,6 +76,8 @@ export async function POST(
         createdById: session.user.id,
       },
     });
+
+    await logActivity(session.user.id, "created task", "Task", task.title, task.projectId);
 
     return NextResponse.json(task, { status: 201 });
   } catch (error) {

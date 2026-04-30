@@ -20,3 +20,7 @@
 .medium { background-color: #e8f5e9; color: #4caf50; }
 .high { background-color: #fff9c4; color: #fbc02d; }
 .urgent { background-color: #ffebee; color: #d32f2f; }
+
+/* Custom variants */
+.outline { border: 1px solid var(--border-color, #e0e0e0); background-color: transparent; color: var(--color-text-muted, #666); }
+.default { background-color: var(--background-secondary, #f1f1f1); color: var(--color-text, #333); }

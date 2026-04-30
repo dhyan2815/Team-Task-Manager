@@ -20,10 +20,7 @@
 }
 
 .logoIcon {
-  width: 20px;
-  height: 20px;
-  background-color: var(--color-primary);
-  border-radius: 4px;
+  color: var(--color-primary);
 }
 
 .logoText {
@@ -72,7 +69,7 @@
   color: var(--color-text-secondary);
   font-size: 14px;
   font-weight: 500;
-  transition: all 0.2s;
+  transition: background-color 0.2s, color 0.2s;
 }
 
 .navLink:hover {
@@ -90,7 +87,7 @@
   padding: 2px;
   border-radius: 4px;
   color: var(--color-text-muted);
-  transition: all 0.2s;
+  transition: background-color 0.2s, color 0.2s;
 }
 
 .addBtn:hover {
@@ -113,7 +110,7 @@
   color: var(--color-text-secondary);
   font-size: 13px;
   font-weight: 500;
-  transition: all 0.2s;
+  transition: background-color 0.2s, color 0.2s;
 }
 
 .projectLink:hover {
