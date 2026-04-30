@@ -57,6 +57,31 @@
   flex-direction: column;
 }
 
+.scrollableList {
+  max-height: 180px; /* Height for ~2 items */
+  overflow-y: auto;
+  padding-right: 0.75rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+.scrollableList::-webkit-scrollbar {
+  width: 5px;
+}
+
+.scrollableList::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollableList::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 10px;
+}
+
+.scrollableList::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}
+
 .taskItem {
   display: flex;
   align-items: center;

@@ -54,6 +54,19 @@ export async function PATCH(
   }
 
   try {
+    const requester = await prisma.projectMember.findUnique({
+      where: {
+        userId_projectId: {
+          userId: session.user.id,
+          projectId: params.id,
+        },
+      },
+    });
+
+    if (!requester || requester.role !== "ADMIN") {
+      return NextResponse.json({ error: "Only admins can edit projects" }, { status: 403 });
+    }
+
     const body = await req.json();
     const project = await prisma.project.update({
       where: { id: params.id },

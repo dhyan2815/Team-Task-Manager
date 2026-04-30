@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -11,12 +11,12 @@ import {
   Plus, 
   MoreHorizontal, 
   Calendar,
-  User as UserIcon,
   Users,
   Search,
   Loader2,
   Edit2,
-  Trash2
+  Trash2,
+  Settings
 } from "lucide-react";
 import { AccessDenied } from "@/components/ui/AccessDenied";
 import styles from "./page.module.css";
@@ -54,12 +54,17 @@ const COLUMNS: { id: TaskStatus; label: string }[] = [
 export default function ProjectBoardPage() {
   const params = useParams();
   const projectId = params.id as string;
+  const searchParams = useSearchParams();
+  const urlSearchQuery = searchParams.get("q") || "";
   
   const [project, setProject] = useState<Project | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<{ status: number; message: string } | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [localSearchQuery, setLocalSearchQuery] = useState("");
+  const router = useRouter();
+
+  const searchQuery = localSearchQuery || urlSearchQuery;
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
@@ -69,6 +74,15 @@ export default function ProjectBoardPage() {
   const [projectMembers, setProjectMembers] = useState<any[]>([]);
   const [newMemberEmail, setNewMemberEmail] = useState("");
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
+
+  const [isEditProjectModalOpen, setIsEditProjectModalOpen] = useState(false);
+  const [projectFormData, setProjectFormData] = useState({
+    name: "",
+    description: "",
+    color: "#0075de",
+  });
+  const [isUpdatingProject, setIsUpdatingProject] = useState(false);
+  const [isDeletingProject, setIsDeletingProject] = useState(false);
   
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -229,6 +243,51 @@ export default function ProjectBoardPage() {
     );
   }, [tasks, searchQuery]);
 
+  const handleUpdateProject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsUpdatingProject(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(projectFormData),
+      });
+
+      if (res.ok) {
+        const updatedProject = await res.json();
+        setProject(updatedProject);
+        setIsEditProjectModalOpen(false);
+      } else {
+        const error = await res.json();
+        alert(error.error || "Failed to update project");
+      }
+    } catch (error) {
+      console.error("Project update failed", error);
+      alert("Something went wrong");
+    } finally {
+      setIsUpdatingProject(false);
+    }
+  };
+
+  const handleDeleteProject = async () => {
+    if (!confirm("Are you sure you want to delete this project? This action cannot be undone.")) return;
+    setIsDeletingProject(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}`, { method: "DELETE" });
+      if (res.ok) {
+        router.push("/projects");
+      } else {
+        const error = await res.json();
+        alert(error.error || "Failed to delete project");
+        setIsDeletingProject(false);
+      }
+    } catch (error) {
+      console.error("Delete project failed", error);
+      alert("Something went wrong");
+      setIsDeletingProject(false);
+    }
+  };
+
   const userRole = project?.members?.[0]?.role;
   const isAdmin = userRole === "ADMIN";
 
@@ -265,15 +324,31 @@ export default function ProjectBoardPage() {
             <input 
               type="text" 
               placeholder="Filter tasks..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={localSearchQuery}
+              onChange={(e) => setLocalSearchQuery(e.target.value)}
             />
           </div>
           {isAdmin && (
-            <Button variant="secondary" onClick={() => setIsMembersModalOpen(true)}>
-              <Users size={18} />
-              Members
-            </Button>
+            <>
+              <Button variant="secondary" onClick={() => setIsMembersModalOpen(true)}>
+                <Users size={18} />
+                Members
+              </Button>
+              <Button 
+                variant="secondary" 
+                onClick={() => {
+                  setProjectFormData({
+                    name: project?.name || "",
+                    description: project?.description || "",
+                    color: project?.color || "#0075de",
+                  });
+                  setIsEditProjectModalOpen(true);
+                }}
+              >
+                <Settings size={18} />
+                Settings
+              </Button>
+            </>
           )}
           <Button onClick={() => {
             setEditingTaskId(null);
@@ -533,6 +608,73 @@ export default function ProjectBoardPage() {
             ))}
           </div>
         </div>
+      </Modal>
+
+      <Modal
+        isOpen={isEditProjectModalOpen}
+        onClose={() => setIsEditProjectModalOpen(false)}
+        title="Project Settings"
+      >
+        <form onSubmit={handleUpdateProject} className={styles.form}>
+          <div className={styles.formGroup}>
+            <label htmlFor="project-name">Project Name</label>
+            <input
+              id="project-name"
+              type="text"
+              required
+              placeholder="e.g. Website Redesign"
+              value={projectFormData.name}
+              onChange={(e) => setProjectFormData({ ...projectFormData, name: e.target.value })}
+            />
+          </div>
+          <div className={styles.formGroup}>
+            <label htmlFor="project-description">Description</label>
+            <textarea
+              id="project-description"
+              placeholder="What is this project about?"
+              rows={3}
+              value={projectFormData.description}
+              onChange={(e) => setProjectFormData({ ...projectFormData, description: e.target.value })}
+            />
+          </div>
+          <div className={styles.formGroup}>
+            <label htmlFor="project-color">Theme Color</label>
+            <div className={styles.colorPicker} style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.5rem' }}>
+              <input
+                id="project-color"
+                type="color"
+                value={projectFormData.color}
+                onChange={(e) => setProjectFormData({ ...projectFormData, color: e.target.value })}
+                style={{ width: '40px', height: '40px', padding: 0, border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+              />
+              <span className="caption">{projectFormData.color}</span>
+            </div>
+          </div>
+          <div className={styles.formActions} style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2rem' }}>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={handleDeleteProject}
+              disabled={isDeletingProject || isUpdatingProject}
+              style={{ color: 'var(--color-error)' }}
+            >
+              {isDeletingProject ? <Loader2 className="animate-spin" size={18} /> : "Delete Project"}
+            </Button>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setIsEditProjectModalOpen(false)}
+                disabled={isUpdatingProject || isDeletingProject}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isUpdatingProject || isDeletingProject}>
+                {isUpdatingProject ? <Loader2 className="animate-spin" size={18} /> : "Save Changes"}
+              </Button>
+            </div>
+          </div>
+        </form>
       </Modal>
     </div>
   );

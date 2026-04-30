@@ -24,21 +24,31 @@ export async function GET() {
       _count: true,
     });
 
-    // 2. Overdue Tasks
-    const overdueTasks = await prisma.task.findMany({
+    // 2. Overdue Tasks Count
+    const overdueTasksCount = await prisma.task.count({
       where: {
         assigneeId: userId,
         status: { not: "DONE" },
         dueDate: { lt: new Date() },
+      }
+    });
+
+    // 3. Recent Tasks
+    const recentTasks = await prisma.task.findMany({
+      where: {
+        OR: [
+          { assigneeId: userId },
+          { createdById: userId }
+        ]
       },
       include: {
         project: { select: { name: true, color: true } }
       },
-      orderBy: { dueDate: "asc" },
-      take: 5
+      orderBy: { updatedAt: "desc" },
+      take: 20
     });
 
-    // 3. Recent Activity logs
+    // 4. Recent Activity logs
     const activities = await prisma.activity.findMany({
       where: {
         OR: [
@@ -47,7 +57,7 @@ export async function GET() {
         ]
       },
       orderBy: { createdAt: "desc" },
-      take: 10,
+      take: 20,
       include: {
         user: { select: { name: true, email: true } },
         project: { select: { name: true, color: true } }
@@ -59,7 +69,8 @@ export async function GET() {
         acc[curr.status] = curr._count;
         return acc;
       }, {} as Record<string, number>),
-      overdueTasks,
+      overdueTasksCount,
+      recentTasks,
       activities,
     });
   } catch (error) {

@@ -42,7 +42,8 @@ interface DashboardActivity {
 
 interface DashboardStats {
   taskCounts: Record<string, number>;
-  overdueTasks: DashboardTask[];
+  overdueTasksCount: number;
+  recentTasks: DashboardTask[];
   activities: DashboardActivity[];
 }
 
@@ -157,54 +158,62 @@ export default function DashboardPage() {
           </div>
           <div className={styles.statInfo}>
             <p className="caption" style={{ color: "var(--color-text-muted)" }}>Overdue</p>
-            <p className="section-heading" style={{ fontSize: "24px" }}>{stats?.overdueTasks?.length || 0}</p>
+            <p className="section-heading" style={{ fontSize: "24px" }}>{stats?.overdueTasksCount || 0}</p>
           </div>
         </Card>
       </div>
 
       <div className={styles.mainGrid}>
-        <Card title="Overdue Tasks" className={styles.listCard}>
-          {stats && stats.overdueTasks.length > 0 ? (
-            <div className={styles.taskList}>
-              {stats.overdueTasks.map((task: DashboardTask) => (
-                <div key={task.id} className={styles.taskItem}>
-                  <div className={styles.taskTitle}>
-                    <p className="body-text" style={{ fontWeight: 600 }}>{task.title}</p>
-                    <p className="caption" style={{ color: "var(--color-text-muted)" }}>{task.project.name}</p>
+        <Card title="My Active Tasks" className={styles.listCard}>
+          {stats && stats.recentTasks && stats.recentTasks.length > 0 ? (
+            <div className={styles.scrollableList}>
+              <div className={styles.taskList}>
+                {stats.recentTasks.map((task: DashboardTask) => (
+                  <div key={task.id} className={styles.taskItem}>
+                    <div className={styles.taskTitle}>
+                      <p className="body-text" style={{ fontWeight: 600 }}>{task.title}</p>
+                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                        <span className="caption" style={{ color: "var(--color-text-muted)" }}>{task.project.name}</span>
+                        <span style={{ fontSize: '10px', color: "var(--color-text-muted)" }}>•</span>
+                        <span className="caption" style={{ color: "var(--color-text-muted)" }}>{task.dueDate ? formatDate(task.dueDate) : "No Due Date"}</span>
+                      </div>
+                    </div>
+                    <Badge variant={getStatusVariant(task.status)}>
+                      {formatStatus(task.status)}
+                    </Badge>
                   </div>
-                  <Badge variant="urgent">
-                    {formatDate(task.dueDate)}
-                  </Badge>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           ) : (
             <p className="caption" style={{ color: "var(--color-text-muted)", textAlign: "center", padding: "2rem" }}>
-              No overdue tasks. Good job!
+              No active tasks found.
             </p>
           )}
         </Card>
 
         <Card title="Recent Activity" className={styles.listCard}>
           {stats && stats.activities && stats.activities.length > 0 ? (
-            <div className={styles.taskList}>
-              {stats.activities.map((activity: DashboardActivity) => (
-                <div key={activity.id} className={styles.taskItem}>
-                  <div className={styles.taskTitle}>
-                    <p className="body-text" style={{ fontWeight: 600 }}>
-                      <span style={{ color: "var(--color-primary)" }}>{activity.user.name}</span> {activity.action} {activity.entityType.toLowerCase()}: {activity.entityTitle}
-                    </p>
-                    {activity.project && (
-                      <p className="caption" style={{ color: "var(--color-text-muted)" }}>
-                        in {activity.project.name}
+            <div className={styles.scrollableList}>
+              <div className={styles.taskList}>
+                {stats.activities.map((activity: DashboardActivity) => (
+                  <div key={activity.id} className={styles.taskItem}>
+                    <div className={styles.taskTitle}>
+                      <p className="body-text" style={{ fontWeight: 600 }}>
+                        <span style={{ color: "var(--color-primary)" }}>{activity.user.name}</span> {activity.action} {activity.entityType.toLowerCase()}: {activity.entityTitle}
                       </p>
-                    )}
+                      {activity.project && (
+                        <p className="caption" style={{ color: "var(--color-text-muted)" }}>
+                          in {activity.project.name}
+                        </p>
+                      )}
+                    </div>
+                    <Badge variant="outline">
+                      {new Date(activity.createdAt).toLocaleDateString()}
+                    </Badge>
                   </div>
-                  <Badge variant="outline">
-                    {new Date(activity.createdAt).toLocaleDateString()}
-                  </Badge>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           ) : (
             <div style={{ textAlign: "center", padding: "2rem", color: "var(--color-text-muted)" }}>

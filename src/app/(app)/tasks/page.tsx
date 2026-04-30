@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -36,11 +37,16 @@ interface Task {
 }
 
 export default function TasksPage() {
+  const searchParams = useSearchParams();
+  const urlSearchQuery = searchParams.get("q") || "";
+  
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<{ status: number; message: string } | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [localSearchQuery, setLocalSearchQuery] = useState("");
   const [filter, setFilter] = useState<"ALL" | "TODO" | "IN_PROGRESS" | "DONE">("ALL");
+
+  const searchQuery = localSearchQuery || urlSearchQuery;
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -106,8 +112,8 @@ export default function TasksPage() {
             <input 
               type="text" 
               placeholder="Search tasks or projects..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={localSearchQuery}
+              onChange={(e) => setLocalSearchQuery(e.target.value)}
             />
           </div>
           
